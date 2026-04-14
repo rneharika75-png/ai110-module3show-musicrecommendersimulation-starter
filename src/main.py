@@ -1,12 +1,8 @@
 """
 Command line runner for the Music Recommender Simulation.
 
-This file helps you quickly run and test your recommender.
-
-You will implement the functions in recommender.py:
-- load_songs
-- score_song
-- recommend_songs
+Runs six user profiles — three normal and three adversarial/edge-case —
+to stress-test the scoring logic and reveal biases.
 """
 
 try:
@@ -15,73 +11,119 @@ except ModuleNotFoundError:
     from src.recommender import load_songs, recommend_songs
 
 
-def main() -> None:
-    songs = load_songs("data/songs.csv")
-    print(f"Loaded songs: {len(songs)}")
+# ---------------------------------------------------------------------------
+# OUTPUT HELPER
+# ---------------------------------------------------------------------------
 
-    # -----------------------------------------------------------------------
-    # TASTE PROFILE
-    # -----------------------------------------------------------------------
-    # This profile represents a user who wants high-energy, upbeat music with
-    # a bright emotional tone and a mostly electronic/produced texture.
-    #
-    # CRITIQUE — can this profile tell "intense rock" from "chill lofi"?
-    #
-    #   With only genre + mood + energy (the old 3-field version):
-    #     Storm Runner  (rock/intense, energy=0.91): energy proximity = 0.89
-    #     Library Rain  (lofi/chill,   energy=0.35): energy proximity = 0.55
-    #     The gap exists but is narrow (~0.08 total score difference).
-    #     A "moody synthwave" at energy=0.75 would score almost the same
-    #     as intense rock — the profile can't separate them.
-    #
-    #   Adding valence + acousticness closes that gap:
-    #     Storm Runner  (valence=0.48, acousticness=0.10):
-    #       valence proximity   = 1 - |0.85 - 0.48| = 0.63
-    #       acousticness proxy  = 1 - |0.15 - 0.10| = 0.95  ← strong match
-    #     Library Rain  (valence=0.60, acousticness=0.86):
-    #       valence proximity   = 1 - |0.85 - 0.60| = 0.75
-    #       acousticness proxy  = 1 - |0.15 - 0.86| = 0.29  ← penalised
-    #     Now chill lofi is clearly down-ranked on acousticness even when
-    #     its valence is closer. The two vibes separate cleanly.
-    #
-    #   Remaining narrowness risk: genre="pop" locks out rock/lofi matches
-    #   at the genre layer (0.30 weight), so this profile is intentionally
-    #   pop-centric. To test genre-agnostic energy matching, remove "genre".
-    # -----------------------------------------------------------------------
-    user_prefs = {
-        "genre":        "pop",    # strong filter — pop-centric taste
-        "mood":         "happy",  # upbeat, positive emotional state
-        "energy":       0.85,     # high energy — driving, not background
-        "valence":      0.85,     # bright / optimistic tone
-        "acousticness": 0.15,     # mostly produced/electronic texture
-    }
+def print_recommendations(label: str, user_prefs: dict, songs: list, k: int = 5) -> None:
+    """Print a formatted top-k results block for one user profile."""
+    recommendations = recommend_songs(user_prefs, songs, k=k)
+    width = 62
 
-    recommendations = recommend_songs(user_prefs, songs, k=5)
+    prefs_summary = "  ".join(
+        f"{k}={v}" for k, v in user_prefs.items()
+    )
 
-    # -----------------------------------------------------------------------
-    # OUTPUT — clean terminal layout
-    # -----------------------------------------------------------------------
-    width = 60
     print("\n" + "=" * width)
-    print("  MUSIC RECOMMENDER — Top 5 Results")
-    print(f"  Profile: genre={user_prefs['genre']}  mood={user_prefs['mood']}"
-          f"  energy={user_prefs['energy']}")
+    print(f"  PROFILE: {label}")
+    print(f"  {prefs_summary}")
     print("=" * width)
 
     for rank, (song, score, explanation) in enumerate(recommendations, start=1):
-        # Score bar: each full block = 0.25 pts, max 19 blocks (4.75 / 0.25)
         filled = round(score / 4.75 * 19)
         bar = "[" + "#" * filled + "-" * (19 - filled) + "]"
 
         print(f"\n  #{rank}  {song['title']}  ({song['artist']})")
         print(f"       {bar}  {score:.2f} / 4.75")
-        print(f"       Genre: {song['genre']}   Mood: {song['mood']}"
-              f"   Energy: {song['energy']}")
+        print(f"       Genre: {song['genre']:<12} Mood: {song['mood']:<12} Energy: {song['energy']}")
         print("       Why:")
         for reason in explanation.split("; "):
             print(f"         {reason}")
 
-    print("\n" + "=" * width + "\n")
+    print("\n" + "=" * width)
+
+
+# ---------------------------------------------------------------------------
+# USER PROFILES
+# ---------------------------------------------------------------------------
+
+# --- Normal profiles ---
+
+HIGH_ENERGY_POP = {
+    "genre":        "pop",
+    "mood":         "happy",
+    "energy":       0.90,
+    "valence":      0.85,
+    "acousticness": 0.10,
+}
+
+CHILL_LOFI = {
+    "genre":        "lofi",
+    "mood":         "chill",
+    "energy":       0.38,
+    "valence":      0.58,
+    "acousticness": 0.80,
+}
+
+DEEP_INTENSE_ROCK = {
+    "genre":        "rock",
+    "mood":         "intense",
+    "energy":       0.95,
+    "valence":      0.45,
+    "acousticness": 0.10,
+}
+
+# --- Adversarial / edge-case profiles ---
+
+# Conflicting preferences: high energy (0.92) but sad mood.
+# Energy pulls toward metal/edm/rock; mood=sad only matches "3am Confession"
+# (blues, energy=0.29). These preferences fight each other — expect confused ranking.
+SAD_BUT_ENERGETIC = {
+    "mood":         "sad",
+    "energy":       0.92,
+    "valence":      0.25,
+    "acousticness": 0.10,
+}
+
+# Ghost genre: only one classical song exists (Moonlit Sonata).
+# After that single genre match, the system has nothing left to filter on —
+# the remaining 4 slots are filled by numerical similarity alone.
+# Reveals catalog-sparsity bias.
+CLASSICAL_PEACEFUL = {
+    "genre":        "classical",
+    "mood":         "peaceful",
+    "energy":       0.18,
+    "valence":      0.88,
+    "acousticness": 0.97,
+}
+
+# Null categorical preferences: no genre or mood specified.
+# Every song earns 0 pts on the categorical features, so the entire
+# ranking is driven by numerical proximity to mid-range values.
+# Reveals what the system recommends when it knows nothing about your taste.
+NULL_PREFERENCE = {
+    "energy":       0.50,
+    "valence":      0.50,
+    "acousticness": 0.50,
+}
+
+
+# ---------------------------------------------------------------------------
+# MAIN
+# ---------------------------------------------------------------------------
+
+def main() -> None:
+    songs = load_songs("data/songs.csv")
+    print(f"Loaded songs: {len(songs)}")
+
+    print_recommendations("High-Energy Pop",    HIGH_ENERGY_POP,    songs)
+    print_recommendations("Chill Lofi Study",   CHILL_LOFI,         songs)
+    print_recommendations("Deep Intense Rock",  DEEP_INTENSE_ROCK,  songs)
+    print_recommendations("Sad but Energetic (adversarial)",  SAD_BUT_ENERGETIC,  songs)
+    print_recommendations("Ghost Genre — Classical (adversarial)", CLASSICAL_PEACEFUL, songs)
+    print_recommendations("Null Preference (adversarial)",    NULL_PREFERENCE,    songs)
+
+    print()
 
 
 if __name__ == "__main__":

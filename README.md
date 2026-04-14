@@ -161,6 +161,128 @@ Loaded songs: 20
 
 ---
 
+### Stress Test — Six Profiles
+
+> **Screenshots:** *(replace each placeholder by dragging your terminal screenshots here)*
+
+Three normal profiles and three adversarial edge cases were run to stress-test the scoring logic.
+
+#### Profile 1 — High-Energy Pop
+
+![High-Energy Pop terminal output](screenshots/profile1-high-energy-pop.png)
+
+```
+==============================================================
+  PROFILE: High-Energy Pop
+  genre=pop  mood=happy  energy=0.9  valence=0.85  acousticness=0.1
+==============================================================
+
+  #1  Sunrise City  (Neon Echo)        [###################]  4.65 / 4.75
+  #2  Gym Hero  (Max Pulse)            [###############----]  3.67 / 4.75
+  #3  Rooftop Lights  (Indigo Parade)  [##########---------]  2.53 / 4.75
+  #4  Overdrive Horizon  (Pulse Grid)  [#######------------]  1.65 / 4.75
+  #5  Storm Runner  (Voltline)         [######-------------]  1.55 / 4.75
+```
+
+**Observation:** Expected result. Genre bonus (+2.00) keeps both pop songs at the top. Storm Runner sneaks into #5 purely on energy proximity (0.99) despite zero categorical matches.
+
+---
+
+#### Profile 2 — Chill Lofi Study *(screenshot here)*
+
+```
+==============================================================
+  PROFILE: Chill Lofi Study
+  genre=lofi  mood=chill  energy=0.38  valence=0.58  acousticness=0.8
+==============================================================
+
+  #1  Library Rain  (Paper Lanterns)    [###################]  4.70 / 4.75
+  #2  Midnight Coding  (LoRoom)         [###################]  4.68 / 4.75
+  #3  Focus Flow  (LoRoom)              [###############----]  3.72 / 4.75
+  #4  Spacewalk Thoughts  (Orbit Bloom) [##########---------]  2.58 / 4.75
+  #5  Coffee Shop Stories  (Slow Stereo)[#######------------]  1.65 / 4.75
+```
+
+**Observation:** Both lofi/chill songs score nearly identically (4.70 vs 4.68) — the catalog has two near-perfect matches, so the score bar is an honest tie. Focus Flow (#3) earns full genre points but loses the mood point (focused ≠ chill).
+
+---
+
+#### Profile 3 — Deep Intense Rock *(screenshot here)*
+
+```
+==============================================================
+  PROFILE: Deep Intense Rock
+  genre=rock  mood=intense  energy=0.95  valence=0.45  acousticness=0.1
+==============================================================
+
+  #1  Storm Runner  (Voltline)          [###################]  4.70 / 4.75
+  #2  Gym Hero  (Max Pulse)             [##########---------]  2.56 / 4.75
+  #3  Iron Cathedral  (Gravecroft)      [######-------------]  1.62 / 4.75
+  #4  Night Drive Loop  (Neon Echo)     [######-------------]  1.50 / 4.75
+  #5  Overdrive Horizon  (Pulse Grid)   [######-------------]  1.50 / 4.75
+```
+
+**Observation:** Storm Runner is the only rock/intense song in the catalog — it scores 4.70 and the #2 result drops to 2.56. Large gap confirms the system correctly identifies the single best match. Iron Cathedral (metal/aggressive) edges in at #3 on energy + low valence similarity despite zero categorical matches.
+
+---
+
+#### Profile 4 — Sad but Energetic *(adversarial)* *(screenshot here)*
+
+```
+==============================================================
+  PROFILE: Sad but Energetic (adversarial)
+  mood=sad  energy=0.92  valence=0.25  acousticness=0.1
+==============================================================
+
+  #1  3am Confession  (Blind Alley)     [########-----------]  1.91 / 4.75
+  #2  Iron Cathedral  (Gravecroft)      [#######------------]  1.69 / 4.75
+  #3  Storm Runner  (Voltline)          [######-------------]  1.62 / 4.75
+  #4  Gym Hero  (Max Pulse)             [######-------------]  1.47 / 4.75
+  #5  Night Drive Loop  (Neon Echo)     [######-------------]  1.43 / 4.75
+```
+
+**Observation (adversarial finding):** The preferences conflict — `energy=0.92` wants driving music, `mood=sad` wants blues. The only sad song (#1, 3am Confession) scores 1.91 despite an energy mismatch of 0.63. Songs #2–5 score more on energy but miss the mood entirely. The system is confused: max score is only 1.91/4.75. Neither preference wins cleanly.
+
+---
+
+#### Profile 5 — Ghost Genre / Classical *(adversarial)* *(screenshot here)*
+
+```
+==============================================================
+  PROFILE: Ghost Genre — Classical (adversarial)
+  genre=classical  mood=peaceful  energy=0.18  valence=0.88  acousticness=0.97
+==============================================================
+
+  #1  Moonlit Sonata  (Clara Voss)      [###################]  4.75 / 4.75  ← PERFECT SCORE
+  #2  Spacewalk Thoughts  (Orbit Bloom) [######-------------]  1.52 / 4.75
+  #3  Coffee Shop Stories  (Slow Stereo)[######-------------]  1.46 / 4.75
+  #4  Library Rain  (Paper Lanterns)    [######-------------]  1.41 / 4.75
+  #5  Autumn Letter  (Maren Veld)       [######-------------]  1.39 / 4.75
+```
+
+**Observation (adversarial finding):** Moonlit Sonata hits a perfect 4.75 — every field matches exactly. But the cliff from #1 (4.75) to #2 (1.52) exposes catalog-sparsity bias: there is only one classical song, so slots #2–5 are filled by acoustic/low-energy proximity alone. The system doesn't "know" it ran out of relevant songs — it just quietly fills the list.
+
+---
+
+#### Profile 6 — Null Preference *(adversarial)* *(screenshot here)*
+
+```
+==============================================================
+  PROFILE: Null Preference (adversarial)
+  energy=0.5  valence=0.5  acousticness=0.5
+==============================================================
+
+  #1  Midnight Coding  (LoRoom)         [######-------------]  1.59 / 4.75
+  #2  Island Patience  (Sol Roots)      [######-------------]  1.54 / 4.75
+  #3  Dusty Back Roads  (The Hollow Pines)[######-----------]  1.54 / 4.75
+  #4  Focus Flow  (LoRoom)              [######-------------]  1.53 / 4.75
+  #5  Velvet Frequency  (Sienna Blue)   [######-------------]  1.49 / 4.75
+```
+
+**Observation (adversarial finding):** With no genre or mood in the profile, every song earns 0 categorical points and the max possible score drops to 1.75. All five results cluster between 1.49–1.59 — essentially a tie. The ranking is determined entirely by which songs happen to sit closest to 0.5 on all three numerical scales. This is the system's "I don't know you" state: it recommends the most statistically average songs in the catalog.
+
+---
+
 ### Data Flow
 
 ```mermaid
