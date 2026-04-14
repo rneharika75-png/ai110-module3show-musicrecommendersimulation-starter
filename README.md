@@ -163,13 +163,9 @@ Loaded songs: 20
 
 ### Stress Test — Six Profiles
 
-> **Screenshots:** *(replace each placeholder by dragging your terminal screenshots here)*
-
 Three normal profiles and three adversarial edge cases were run to stress-test the scoring logic.
 
 #### Profile 1 — High-Energy Pop
-
-![High-Energy Pop terminal output](screenshots/profile1-high-energy-pop.png)
 
 ```
 ==============================================================
@@ -188,7 +184,7 @@ Three normal profiles and three adversarial edge cases were run to stress-test t
 
 ---
 
-#### Profile 2 — Chill Lofi Study *(screenshot here)*
+#### Profile 2 — Chill Lofi Study
 
 ```
 ==============================================================
@@ -207,7 +203,7 @@ Three normal profiles and three adversarial edge cases were run to stress-test t
 
 ---
 
-#### Profile 3 — Deep Intense Rock *(screenshot here)*
+#### Profile 3 — Deep Intense Rock
 
 ```
 ==============================================================
@@ -226,7 +222,7 @@ Three normal profiles and three adversarial edge cases were run to stress-test t
 
 ---
 
-#### Profile 4 — Sad but Energetic *(adversarial)* *(screenshot here)*
+#### Profile 4 — Sad but Energetic *(adversarial)*
 
 ```
 ==============================================================
@@ -245,7 +241,7 @@ Three normal profiles and three adversarial edge cases were run to stress-test t
 
 ---
 
-#### Profile 5 — Ghost Genre / Classical *(adversarial)* *(screenshot here)*
+#### Profile 5 — Ghost Genre / Classical *(adversarial)*
 
 ```
 ==============================================================
@@ -264,7 +260,7 @@ Three normal profiles and three adversarial edge cases were run to stress-test t
 
 ---
 
-#### Profile 6 — Null Preference *(adversarial)* *(screenshot here)*
+#### Profile 6 — Null Preference *(adversarial)*
 
 ```
 ==============================================================
