@@ -72,6 +72,41 @@ DEEP_INTENSE_ROCK = {
     "valence":      0.45,
     "acousticness": 0.10,
 }
+# MUSICAL INTUITION CHECK — Deep Intense Rock
+#
+# Expected ranking (gut feel):
+#   #1  Storm Runner   — rock/intense, obvious match ✓
+#   #2  Iron Cathedral — metal/aggressive, sonically the closest neighbour ✓
+#   #3  Gym Hero       — pop/intense, feels out of place ✗
+#
+# Actual ranking the system produces:
+#   #1  Storm Runner   4.70  ✓ correct
+#   #2  Gym Hero       2.56  ✗ WRONG — a pop song ranked above metal
+#   #3  Iron Cathedral 1.62  ✗ should be #2
+#
+# WHY does Gym Hero beat Iron Cathedral?
+#   Gym Hero:       +0.00 genre  +1.00 mood(intense) +0.98 energy = 2.56
+#   Iron Cathedral: +0.00 genre  +0.00 mood(aggressive≠intense) +0.98 energy = 1.62
+#
+#   The mood match (+1.00) for "intense" pulls a POP song above a METAL song.
+#   The system has no concept that metal is adjacent to rock — it treats
+#   pop and metal as equally distant from rock. This is a real limitation.
+#
+# ROOT CAUSE — the genre weight is all-or-nothing (binary):
+#   Every non-rock genre scores 0, regardless of sonic similarity.
+#   A partial-credit system (e.g. rock≈metal = 0.5 pts) would fix this,
+#   but that requires a genre-similarity lookup table.
+#
+# WEIGHT EXPERIMENT — what if mood were worth less (0.5 instead of 1.0)?
+#   Gym Hero:       +0.00 genre  +0.50 mood  +0.98 energy = 1.72
+#   Iron Cathedral: +0.00 genre  +0.00 mood  +0.98 energy = 1.62
+#   Gap shrinks but Gym Hero still wins. The real fix is partial genre credit.
+#
+# VERDICT: For pop/happy profiles the weights feel correct.
+#          For rock/intense the mood weight accidentally promotes pop songs
+#          because "intense" mood is shared across genres.
+#          The system works best when the user's genre has multiple songs
+#          in the catalog to fill all k slots.
 
 # --- Adversarial / edge-case profiles ---
 

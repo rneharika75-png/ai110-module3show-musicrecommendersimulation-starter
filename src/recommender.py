@@ -107,13 +107,53 @@ def load_songs(csv_path: str) -> List[Dict]:
 #   Ranking Rule answers "which k songs are BEST overall?"
 # ---------------------------------------------------------------------------
 
-POINTS = {
-    "genre":        2.00,   # categorical — genre defines the sonic universe
-    "mood":         1.00,   # categorical — primary vibe label
-    "energy":       1.00,   # numerical  — intensity/drive
-    "valence":      0.50,   # numerical  — emotional brightness
-    "acousticness": 0.25,   # numerical  — texture (electronic vs organic)
-}
+# ---------------------------------------------------------------------------
+# WEIGHT EXPERIMENT — toggle EXPERIMENT_MODE to compare two configurations.
+#
+# ORIGINAL  (genre-first):  genre=2.00  mood=1.00  energy=1.00  → max 4.75
+# EXPERIMENT (energy-first): genre=1.00  mood=1.00  energy=2.00  → max 4.75
+#
+# Max score is identical in both configs (4.75), so scores stay comparable.
+# The only shift is that genre loses its 2× advantage over energy.
+# Prediction: cross-genre songs with matching energy will climb the ranking.
+#
+# RESULTS (Deep Intense Rock: genre=rock, mood=intense, energy=0.95):
+#
+#   ORIGINAL            EXPERIMENT
+#   #2 Gym Hero  2.56   #2 Gym Hero  3.54   ← gap WIDENED, not fixed
+#   #3 Iron Cath 1.62   #3 Iron Cath 2.60
+#
+# FINDING: doubling energy made things MORE different but not more accurate.
+# Gym Hero still beats Iron Cathedral because Gym Hero has BOTH:
+#   - mood match (+1.00 in both configs)
+#   - near-perfect energy: 0.93 vs target 0.95 → similarity 0.98
+# Iron Cathedral also has great energy (0.97) but zero categorical matches.
+# Both songs benefit equally from the energy boost, so the gap stays.
+#
+# CONCLUSION: the Gym Hero problem is caused by the mood weight, not the
+# genre weight. Reducing mood (1.00→0.50) would narrow the gap. The real
+# fix is partial genre credit (rock≈metal = 0.5 pts). Restoring originals.
+# ---------------------------------------------------------------------------
+EXPERIMENT_MODE = False  # False = original weights, True = energy-first weights
+
+if EXPERIMENT_MODE:
+    POINTS = {
+        "genre":        1.00,   # halved — genre still matters but not dominant
+        "mood":         1.00,   # unchanged
+        "energy":       2.00,   # doubled — energy now the strongest signal
+        "valence":      0.50,   # unchanged
+        "acousticness": 0.25,   # unchanged
+    }
+    # math check: 1.00 + 1.00 + 2.00 + 0.50 + 0.25 = 4.75 ✓
+else:
+    POINTS = {
+        "genre":        2.00,   # original — genre defines the sonic universe
+        "mood":         1.00,   # original
+        "energy":       1.00,   # original
+        "valence":      0.50,   # original
+        "acousticness": 0.25,   # original
+    }
+    # math check: 2.00 + 1.00 + 1.00 + 0.50 + 0.25 = 4.75 ✓
 
 
 def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
